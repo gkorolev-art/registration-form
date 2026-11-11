@@ -12,13 +12,22 @@
     <form id="signupForm" novalidate>
       <div class="field">
         <label for="phone">Телефон</label>
-        <input type="text" id="phone" name="phone" placeholder="+79991234567">
+        <input type="tel" id="phone" name="phone" value="+7" placeholder="+7(000) 000-00-00" inputmode="tel" autocomplete="tel">
         <span class="error" id="phoneError"></span>
       </div>
 
       <div class="field">
         <label for="password">Пароль</label>
-        <input type="password" id="password" name="password" placeholder="Минимум 8 символов">
+        <div class="password-field">
+          <input type="password" id="password" name="password" placeholder="Минимум 8 символов">
+          <button type="button" class="password-toggle" aria-controls="password" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              <path class="eye-slash" d="m3 3 18 18" />
+            </svg>
+          </button>
+        </div>
         <div class="strength-meter">
           <div class="strength-bar" id="strengthBar"></div>
         </div>
@@ -28,7 +37,16 @@
 
       <div class="field">
         <label for="confirmPassword">Повторите пароль</label>
-        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Повторите пароль">
+        <div class="password-field">
+          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Повторите пароль">
+          <button type="button" class="password-toggle" aria-controls="confirmPassword" aria-label="Показать подтверждение пароля" aria-pressed="false" title="Показать подтверждение пароля">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              <path class="eye-slash" d="m3 3 18 18" />
+            </svg>
+          </button>
+        </div>
         <span class="error" id="confirmError"></span>
       </div>
 

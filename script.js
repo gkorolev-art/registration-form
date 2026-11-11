@@ -13,19 +13,56 @@ const strengthBar = document.getElementById('strengthBar');
 const strengthLabel = document.getElementById('strengthLabel');
 
 function validatePhone(value) {
-  const digitsOnly = value.replace(/\D/g, '');
-  const isValidLength = digitsOnly.length === 11;
-  const startsCorrectly = digitsOnly.startsWith('7') || digitsOnly.startsWith('8');
-  return isValidLength && startsCorrectly;
+  return /^\+7\(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(value);
+}
+
+function getPhoneDigits(value) {
+  if (value.startsWith('+7')) return value.slice(2).replace(/\D/g, '').slice(0, 10);
+  const digits = value.replace(/\D/g, '');
+  return (digits.length === 11 && /^[78]/.test(digits) ? digits.slice(1) : digits).slice(0, 10);
+}
+
+function formatPhone(digits) {
+  let result = '+7';
+  if (digits.length > 0) result += '(' + digits.slice(0, 3);
+  if (digits.length >= 3) result += ') ';
+  if (digits.length > 3) result += digits.slice(3, 6);
+  if (digits.length > 6) result += '-' + digits.slice(6, 8);
+  if (digits.length > 8) result += '-' + digits.slice(8, 10);
+  return result;
+}
+
+function updatePhoneInput() {
+  const value = phoneInput.value;
+  const cursor = phoneInput.selectionStart ?? value.length;
+  const digitsBeforeCursor = value.slice(0, cursor).replace(/\D/g, '').length;
+  const prefixDigits = value.startsWith('+7') || (value.replace(/\D/g, '').length === 11 && /^[78]/.test(value)) ? 1 : 0;
+  const nationalDigitsBeforeCursor = Math.max(0, digitsBeforeCursor - prefixDigits);
+  phoneInput.value = formatPhone(getPhoneDigits(value));
+
+  let position = 2;
+  let seen = 0;
+  while (position < phoneInput.value.length && seen < nationalDigitsBeforeCursor) {
+    if (/\d/.test(phoneInput.value[position])) seen++;
+    position++;
+  }
+  while (position < phoneInput.value.length && /\D/.test(phoneInput.value[position])) position++;
+  phoneInput.setSelectionRange(position, position);
+
+  phoneError.textContent = phoneInput.value === '+7' || validatePhone(phoneInput.value)
+    ? ''
+    : 'Введите номер полностью в формате +7(000) 000-00-00';
+  updateSubmitButtonState();
 }
 
 function getPasswordStrength(value) {
   if (value.length === 0) return 0;
+  if (!isPasswordValid(value)) return 1;
 
   let score = 0;
   if (value.length >= 8) score++;
   if (/[0-9]/.test(value)) score++;
-  if (/[^a-zA-Z0-9]/.test(value)) score++;
+  if (/[\p{P}\p{S}]/u.test(value)) score++;
   if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
 
   if (score <= 1) return 1;
@@ -34,7 +71,7 @@ function getPasswordStrength(value) {
 }
 
 function isPasswordValid(value) {
-  return getPasswordStrength(value) >= 2 && value.length >= 8;
+  return value.length >= 8 && /[0-9\p{P}\p{S}]/u.test(value);
 }
 
 function doPasswordsMatch(password, confirm) {
@@ -65,15 +102,37 @@ function updateSubmitButtonState() {
   submitBtn.style.cursor = submitBtn.disabled ? 'not-allowed' : 'pointer';
 }
 
-phoneInput.addEventListener('input', () => {
-  if (phoneInput.value.length === 0) {
-    phoneError.textContent = '';
-  } else if (!validatePhone(phoneInput.value)) {
-    phoneError.textContent = 'Введите номер в формате +7XXXXXXXXXX (11 цифр)';
-  } else {
-    phoneError.textContent = '';
+phoneInput.addEventListener('input', updatePhoneInput);
+
+// Удаляем ближайшую цифру вместе с разделителями, чтобы маска не мешала стиранию.
+phoneInput.addEventListener('beforeinput', (event) => {
+  if (!['deleteContentBackward', 'deleteContentForward'].includes(event.inputType)) return;
+  const start = phoneInput.selectionStart;
+  const end = phoneInput.selectionEnd;
+  if (start !== end) return;
+
+  event.preventDefault();
+  const backwards = event.inputType === 'deleteContentBackward';
+  let index = backwards ? start - 1 : start;
+  while (index >= 2 && index < phoneInput.value.length && /\D/.test(phoneInput.value[index])) {
+    index += backwards ? -1 : 1;
   }
-  updateSubmitButtonState();
+  if (index < 2 || index >= phoneInput.value.length) return;
+  phoneInput.setRangeText('', index, index + 1, 'start');
+  updatePhoneInput();
+});
+
+phoneInput.addEventListener('paste', (event) => {
+  const text = event.clipboardData?.getData('text');
+  if (!text) return;
+  const digits = text.replace(/\D/g, '');
+  // Полный номер из буфера заменяет поле, включая уже установленный код страны.
+  if ((digits.length === 11 && /^[78]/.test(digits)) || digits.length === 10) {
+    event.preventDefault();
+    phoneInput.value = formatPhone(getPhoneDigits(text));
+    phoneInput.setSelectionRange(phoneInput.value.length, phoneInput.value.length);
+    updatePhoneInput();
+  }
 });
 
 passwordInput.addEventListener('input', () => {
@@ -105,6 +164,20 @@ confirmInput.addEventListener('input', () => {
     confirmError.textContent = '';
   }
   updateSubmitButtonState();
+});
+
+document.querySelectorAll('.password-toggle').forEach((button) => {
+  const input = document.getElementById(button.getAttribute('aria-controls'));
+  const fieldName = input === passwordInput ? 'пароль' : 'подтверждение пароля';
+
+  button.addEventListener('click', () => {
+    const showPassword = input.type === 'password';
+    input.type = showPassword ? 'text' : 'password';
+    button.setAttribute('aria-pressed', String(showPassword));
+    const label = `${showPassword ? 'Скрыть' : 'Показать'} ${fieldName}`;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  });
 });
 
 form.addEventListener('submit', (e) => {
